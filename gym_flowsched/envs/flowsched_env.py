@@ -108,7 +108,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
 
     def step(self, a):
         if self.num_flows < self.nF:
-            self.newflow_size = self.nS * np.random.random()
+            self.newflow_size = self.nS #* np.random.random()
             self.rm_size.append(self.newflow_size)
             self.num_flows += 1
 
