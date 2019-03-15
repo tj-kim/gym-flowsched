@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+from gym import Env, spaces
 from gym.envs.toy_text import discrete
 
 class FlowSchedEnv(discrete.DiscreteEnv):
@@ -33,32 +34,51 @@ class FlowSchedEnv(discrete.DiscreteEnv):
 
 
     def __init__(self):
-        nS = 20
-        nA = 3
-        isd = [1/nS for x in range(nS)]
+        self.nS = 20
+        self.nA = 3
+        self.isd = [1/self.nS for x in range(self.nS)]
         self.nF = 10 
-        self.min_last = 1 * np.random.random()
         self.rm_size = []
         self.flow_time_link = 0
+        self.cum_flowtime = 0
 
-        wt = [[np.random.random() for i in range(nS)] for j in range(nA)]
-        self.bandwidth_cap = [i+1 for i in range(nS)]
-        self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
-        # dimension: nA x nS
+        self.lastaction = None
+        self.action_space = spaces.Discrete(self.nA)
+        self.observation_space = spaces.Discrete(self.nS)
 
-        P = {s: {a: [] for a in range(nA)} for s in range(nS)}
-        for s in range(nS):
-            for a in range(nA):
-                for next_s in range(nS):
-                    P[s][a].append((1/nS, next_s, self.rate[a][s]))
+        self.seed()
+        self.s = discrete.categorical_sample(self.isd, self.np_random)
+
+        wt = [[np.random.random() for i in range(self.nS)] for j in range(self.nA)]
+        self.bandwidth_cap = [i+1 for i in range(self.nS)]
+        self.rate = np.matmul(wt,np.diag(self.bandwidth_cap)) # dimension: nA x nS
+
+        self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
+        for s in range(self.nS):
+            for a in range(self.nA):
+                for next_s in range(self.nS):
+                    self.P[s][a].append((1/self.nS, next_s, self.rate[a][s]))
 
         self.num_flows = 0
-        discrete.DiscreteEnv.__init__(
-            self, nS, nA, P, isd)
+
+        self.lastaction = None
+        #discrete.DiscreteEnv.__init__(self, self.nS, self.nA, P, self.isd)
+
+    def reset(self):
+        self.s = discrete.categorical_sample(self.isd, self.np_random)
+        self.lastaction = None
+        self.rm_size = []
+        self.flow_time_link = 0
+        self.num_flows = 0
+
+        wt = [[np.random.random() for i in range(self.nS)] for j in range(self.nA)]
+        self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
+        return self.s
 
 
     def render(self, mode='human'):
-        print(self.flow_time_link)
+        print('(Render) Flow Time: {}'.format(self.flow_time_link))
+        #print('(Render) rm_size: {}'.format(self.rm_size))
 
     def _get_flow_time(self, rm_size, flow_time_link, bandwidth_cap, rate):
         """
@@ -71,41 +91,42 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         
         time_out = 0
         while time_out < 1 and rm_size != []:
-            rate_per_flow = rate / self.num_flows # Needs modification for multiple links 
+            rate_per_flow = rate / np.size(rm_size) # Needs modification for multiple links 
             if min(rm_size) > rate_per_flow * (1-time_out):
-                flow_time_link += (1-time_out) * self.num_flows
+                flow_time_link += (1-time_out) * np.size(rm_size)
                 rm_size = [x - rate_per_flow * (1-time_out) for x in rm_size]
+                time_out = 1
             else:
                 # The following two lines need modification if rate_per_flow is different over flows
                 time_shortest_flow = min(rm_size) / rate_per_flow
-                time_out += time_shortest_flow
-                flow_time_link += time_shortest_flow * self.num_flows
+                flow_time_link += time_shortest_flow * np.size(rm_size)
                 rm_size = [x - min(rm_size) for x in rm_size]
-                for i in range(np.size(rm_size)):
-                    if rm_size[i] <= 0:
-                        self.num_flows -= 1
-                        rm_size.remove(rm_size[i])
+                rm_size = [x for x in rm_size if x > 0]
+                time_out += time_shortest_flow
 
         return rm_size, flow_time_link
 
     def step(self, a):
         if self.num_flows < self.nF:
-            self.newflow_size = self.nS * self.min_last
+            self.newflow_size = self.nS * np.random.random()
             self.rm_size.append(self.newflow_size)
             self.num_flows += 1
 
         transitions = self.P[self.s][a]
         i = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
-        prob, newstate, reward = transitions[i]
+        p, newstate, reward = transitions[i]
         self.s = newstate
 
         self.rm_size, self.flow_time_link = self._get_flow_time(self.rm_size, self.flow_time_link, self.bandwidth_cap, self.rate[a][self.s])
- 
+        
+        #self.render()
 
         if self.rm_size == [] and self.num_flows >= self.nF:
             done = True
+            print('Final flow time:{}'.format(self.flow_time_link))
+            self.cum_flowtime += self.flow_time_link
+            print('Cumulative flow time:{}'.format(self.cum_flowtime))
         else:
             done = False
-        #return (newstate, reward, done, self.flow_time_link, prob)
-        return (newstate, reward, done, prob)
+        return (newstate, reward, done, {"prob": p})
 

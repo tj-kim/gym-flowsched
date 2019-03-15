@@ -224,9 +224,9 @@ def main(args):
             while True:
                 print('--------------------')
                 if state is not None:
-                    actions, _, state, _ = model.step(obs,S=state, M=dones)
+                    actions, state,= 1, 1 
                 else:
-                    actions, _, _, _ = model.step(obs)
+                    actions = np.random.randint(3)
 
                 obs, _, done, _ = env.step(actions)
                 #env.render()
