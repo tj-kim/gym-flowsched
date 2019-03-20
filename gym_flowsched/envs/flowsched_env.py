@@ -49,12 +49,12 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         self.seed(9)
         self.s = discrete.categorical_sample(self.isd, self.np_random)
 
-        wt = [ [np.random.random() for i in range(self.nS)] for j in range(self.nA)]
+        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.8*np.random.random() for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.7*np.random.random() for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
         self.bandwidth_cap = [i+1 for i in range(self.nS)]
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap)) # dimension: nA x nS
@@ -79,13 +79,13 @@ class FlowSchedEnv(discrete.DiscreteEnv):
 
         self.seed(7)
         #wt = [[np.random.random() for i in range(self.nS)] for j in range(self.nA)]
-        wt = [ [np.random.random() for i in range(self.nS)] for j in range(self.nA)]
+        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.8*np.random.random() for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.7*np.random.random() for i in range(self.nS)]
-        print(wt[1][1])
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+    
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
         return self.s
 
@@ -131,12 +131,12 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         p, newstate, reward = transitions[i]
         self.s = newstate
 
-        wt = [ [np.random.random() for i in range(self.nS)] for j in range(self.nA)]
+        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.8*np.random.random() for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.7*np.random.random() for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
 
