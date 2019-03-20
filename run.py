@@ -229,13 +229,13 @@ def main(args):
                     actions, _, _, _ = model.step(obs)
 
                 obs, _, done, _ = env.step(actions)
+                print(actions)
                 #env.render()
                 done = done.any() if isinstance(done, np.ndarray) else done
 
                 if done:
                     print('Done. Rendering......')
                     env.render()
-                    #obs = env.reset()
                     break
 
         env.close()
