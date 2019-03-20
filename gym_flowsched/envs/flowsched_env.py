@@ -91,7 +91,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
 
 
     def render(self, mode='human'):
-        print('(Render) Flow Time: {}'.format(self.flow_time_link))
+        return self.cum_flowtime
         #print('(Render) rm_size: {}'.format(self.rm_size))
 
     def _get_flow_time(self, rm_size, flow_time_link, bandwidth_cap, rate):

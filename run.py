@@ -219,6 +219,7 @@ def main(args):
 
         state = model.initial_state if hasattr(model, 'initial_state') else None
         dones = np.zeros((1,))
+        cum_flowtime_epi = np.zeros(1000)
 
         for i_episode in range(1000):
             while True:
@@ -235,10 +236,13 @@ def main(args):
 
                 if done:
                     print('Done. Rendering......')
-                    env.render()
+                    cum_flowtime_epi[i_episode] = env.render()
                     break
 
         env.close()
+
+    # write to file
+    np.savetxt('data_normal.txt', cum_flowtime_epi)
 
     return model
 
