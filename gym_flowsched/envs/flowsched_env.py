@@ -6,27 +6,25 @@ from gym.envs.toy_text import discrete
 class FlowSchedEnv(discrete.DiscreteEnv):
     """
     Description: 
-    There is a network with pre-determined topology in which flows arrive at different timeslots. When each episode starts, flows arrive one by one, the bandwidth capacity on each link changes, and the agent chooses a protocol for all flows on each given link. 
+    There is single link network in which flows arrive at different timeslots. When each episode starts, flows arrive one by one, the bandwidth capacity changes, and the agent chooses a protocol for all flows on the link. 
 
     Initialization:
     There are a total of 20 levels of bandwidth capacity on each link, 3 protocol choices, and 10 flows coming one by one per round. 
 
     Observations:
-    There are 20 states on each link since there are 20 levels of bandwidth capacity on each link. 
+    There are 20 states on each link since there are 20 levels of bandwidth capacity on the link. 
 
     Actions:
-    There are 3 actions on each link:
+    There are 3 actions on the link:
     TCP Cubic,
     TCP Reno,
     TCP Vegas
 
     Rewards:
-    There is a reward of -1 on each alive flow on each link for each action, since as long as the flow is not completed on a given link, the completion time of that flow on that link is increased by 1
+    Total achieved rate in the current round
 
     Probability transition matrix:
-    P[s][a]= [(probability, nextstate, reward, done), ...]
-    
-    We first focus on a single link network.
+    P[s][a]= [(probability, nextstate), ...]
 
     """
 
@@ -63,7 +61,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         for s in range(self.nS):
             for a in range(self.nA):
                 for next_s in range(self.nS):
-                    self.P[s][a].append((1/self.nS, next_s, self.rate[a][s]))
+                    self.P[s][a].append((1/self.nS, next_s))
 
         self.num_flows = 0
 
@@ -122,13 +120,14 @@ class FlowSchedEnv(discrete.DiscreteEnv):
 
     def step(self, a):
         if self.num_flows < self.nF:
-            self.newflow_size = self.nS #* np.random.random()
+            self.newflow_size = self.nS # Need to read from a list of flow sizes
             self.rm_size.append(self.newflow_size)
             self.num_flows += 1
 
         transitions = self.P[self.s][a]
+        reward = self.rate[a][self.s]
         i = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
-        p, newstate, reward = transitions[i]
+        p, newstate = transitions[i]
         self.s = newstate
 
         wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
