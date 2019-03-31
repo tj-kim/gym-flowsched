@@ -37,6 +37,8 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         self.isd = [1/self.nS for x in range(self.nS)]
         self.nF = 10 
         self.rm_size = []
+
+        self.num_flows = 0
         self.flow_time_link = 0
         self.cum_flowtime = 0
 
@@ -63,9 +65,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
                 for next_s in range(self.nS):
                     self.P[s][a].append((1/self.nS, next_s))
 
-        self.num_flows = 0
-
-        self.lastaction = None
+        # self.lastaction = None
         #discrete.DiscreteEnv.__init__(self, self.nS, self.nA, P, self.isd)
 
     def reset(self):
@@ -76,7 +76,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         self.num_flows = 0
 
         self.seed(7)
-        #wt = [[np.random.random() for i in range(self.nS)] for j in range(self.nA)]
+
         wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
