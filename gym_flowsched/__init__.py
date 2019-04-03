@@ -7,3 +7,8 @@ register(
     id='FlowSched-v0',
     entry_point='gym_flowsched.envs:FlowSchedEnv',
     )
+
+register(
+    id='FlowSchedMP-v0',
+    entry_point='gym_flowsched.envs:FlowSchedMultiPathEnv',
+    )

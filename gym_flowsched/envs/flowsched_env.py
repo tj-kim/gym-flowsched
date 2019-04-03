@@ -52,9 +52,9 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.8 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.6 for i in range(self.nS)]
 
         self.bandwidth_cap = [i+1 for i in range(self.nS)]
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap)) # dimension: nA x nS
@@ -80,9 +80,9 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.8 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.6 for i in range(self.nS)]
     
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
         return self.s
@@ -125,7 +125,6 @@ class FlowSchedEnv(discrete.DiscreteEnv):
             self.num_flows += 1
 
         transitions = self.P[self.s][a]
-        reward = self.rate[a][self.s]
         i = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
         p, newstate = transitions[i]
         self.s = newstate
@@ -133,19 +132,18 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.8 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.6 for i in range(self.nS)]
 
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
+        reward = self.rate[a][self.s]
 
         self.rm_size, self.flow_time_link = self._get_flow_time(self.rm_size, self.flow_time_link, self.bandwidth_cap, self.rate[a][self.s])
 
         if self.rm_size == [] and self.num_flows >= self.nF:
             done = True
-            print('Final flow time:{}'.format(self.flow_time_link))
             self.cum_flowtime += self.flow_time_link
-            print('Cumulative flow time:{}'.format(self.cum_flowtime))
         else:
             done = False
         return (newstate, reward, done, {"prob": p})
