@@ -94,9 +94,10 @@ class FlowSchedEnv(discrete.DiscreteEnv):
 
     def _get_flow_time(self, rm_size, flow_time_link, bandwidth_cap, rate):
         """
-        rm_size: a vector with a dynamic dimention ranging from 0 to nF
+        rm_size: a vector with a dynamic dimension ranging from 0 to nF; 
+                 the dimension represents the number of alive flows
         flow_time_link: a constant
-        rate = rate[s][a], a constant
+        rate = rate[a][s], a constant
         """
         if rm_size != []:
             i_shortest_flow = np.argmin(rm_size)
