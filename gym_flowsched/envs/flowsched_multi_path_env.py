@@ -35,7 +35,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         newflow_size_link: nF * 1
         self.s: nL * 1
         self.a: nL * 1
-        transitions: nS * 2
+        transitions: nS tuples, where each tuple is (probability, nextstate)
         wt: nA * nS
         self.rate: nA * nS
         self.flow_time_link: nL * nF * 1
@@ -109,7 +109,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
             newflow_size_link: nF * 1
             self.s: nL * 1
             self.a: nL * 1
-            transitions: nS * 2
+            transitions: nS tuples, where each tuple is (probability, nextstate)
             wt: nA * nS
             self.rate: nA * nS
             self.flow_time_link: nL * nF * 1
@@ -137,7 +137,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
 
             self.rm_size[i_link], self.flow_time_link[i_link] = self._get_flow_time(self.rm_size[i_link], self.flow_time_link[i_link], self.bandwidth_cap, self.rate[a][self.s])
 
-            if self.rm_size[i_link] == np.zeros() and anymore_flows == 0:
+            if ( self.rm_size[i_link] == np.zeros(nF) ).all() and anymore_flows == 0:
                 done = True
                 print('Final flow time:{}'.format(sum(self.flow_time_link[i_link])))
                 self.cum_flowtime_link[i_link] += sum(self.flow_time_link[i_link])
