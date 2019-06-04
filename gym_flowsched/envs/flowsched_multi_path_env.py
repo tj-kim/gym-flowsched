@@ -98,12 +98,12 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
             return self.s
 
         def render(self, mode='human'):
-            return self.cum_flowtime_link
+            return self.flow_time_link
 
         def _get_flow_time(self, rm_size, flow_time_link, bandwidth_cap, rate):
             pass
 
-        def step(self, a, newflow_size_link, i_link, anymore_flows):
+        def step(self, a):
             """
             self.rm_size: nL * nF
             newflow_size_link: nF * 1
@@ -113,39 +113,45 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
             wt: nA * nS
             self.rate: nA * nS
             self.flow_time_link: nL * nF * 1
-            self.cum_flowtime_link: (just for show) nL * 1 
             self.bandwidth_cap: nS * 1
 
             """
-            self.rm_size[i_link] += newflow_size_link
+            newflow_size_link = 
+
+            for i_link in range(L):
+                self.rm_size[i_link] += newflow_size_link[i_link]
 
 
-            transitions = self.P[self.s[i_link]][a[i_link]]
-            reward = self.rate[a[i_link]][self.s[i_link]]
-            i = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
-            p, newstate = transitions[i]
-            self.s[i_link] = newstate
+                transitions = self.P[self.s[i_link]][a[i_link]]
+                reward = self.rate[a[i_link]][self.s[i_link]]
+                i = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
+                p, newstate = transitions[i]
+                p_vec.append(p)
+                self.s[i_link] = newstate
 
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
-            for j in range(self.nA):
-                if j == 1:
-                    wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-                if j == 2:
-                    wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+                wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
+                for j in range(self.nA):
+                    if j == 1:
+                        wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
+                    if j == 2:
+                        wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
-            self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
+                self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
 
-            self.rm_size[i_link], self.flow_time_link[i_link] = self._get_flow_time(self.rm_size[i_link], self.flow_time_link[i_link], self.bandwidth_cap, self.rate[a][self.s])
+                self.rm_size[i_link], self.flow_time_link[i_link] = self._get_flow_time(self.rm_size[i_link], self.flow_time_link[i_link], self.bandwidth_cap, self.rate[a][self.s])
 
-            if ( self.rm_size[i_link] == np.zeros(nF) ).all() and anymore_flows == 0:
-                done = True
-                print('Final flow time:{}'.format(sum(self.flow_time_link[i_link])))
-                self.cum_flowtime_link[i_link] += sum(self.flow_time_link[i_link])
-                print('Cumulative flow time this link:{}'.format(self.cum_flowtime_link[i_link]))
-            else:
-                done = False
+                if ( self.rm_size[i_link] == np.zeros(nF) ).all() and anymore_flows == 0:
+                    done = True
+                    print('Flow time on link {} is: {}'.format(i_link, self.flow_time_link[i_link]))
+                else:
+                    done = False
 
-            return (newstate, reward, done, {"prob": p})
+
+                newstate_vec.append(newstate)
+                reward_vec.append(reward)
+                done_vec.append(done)
+
+            return (newstate_vec, reward_vec, done_vec, {"prob": p_vec})
 
 
 

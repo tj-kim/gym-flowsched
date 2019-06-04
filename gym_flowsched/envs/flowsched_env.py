@@ -52,9 +52,11 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
         for j in range(self.nA):
             if j == 1:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.8 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
             if j == 2:
-                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.6 for i in range(self.nS)]
+                wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+        # Mean of wt = [0.9, 0.8, 0.6] 
+        #           or [0.9, 0.7, 0.5] (lines of MAB and A2C merge in the end)
 
         self.bandwidth_cap = [i+1 for i in range(self.nS)]
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap)) # dimension: nA x nS
