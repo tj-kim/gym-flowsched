@@ -94,7 +94,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         return self.cum_flowtime
         #print('(Render) rm_size: {}'.format(self.rm_size))
 
-    def _get_flow_time(self, rm_size, flow_time_link, bandwidth_cap, rate):
+    def _get_flow_time(self, rm_size, flow_time_link, rate):
         """
         rm_size: a vector with a dynamic dimension ranging from 0 to nF; 
                  the dimension represents the number of alive flows
@@ -142,7 +142,7 @@ class FlowSchedEnv(discrete.DiscreteEnv):
         self.rate = np.matmul(wt,np.diag(self.bandwidth_cap))
         reward = self.rate[a][self.s]
 
-        self.rm_size, self.flow_time_link = self._get_flow_time(self.rm_size, self.flow_time_link, self.bandwidth_cap, self.rate[a][self.s])
+        self.rm_size, self.flow_time_link = self._get_flow_time(self.rm_size, self.flow_time_link, self.rate[a][self.s])
 
         if self.rm_size == [] and self.num_flows >= self.nF:
             done = True
