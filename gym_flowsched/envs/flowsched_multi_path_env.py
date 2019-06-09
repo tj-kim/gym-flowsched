@@ -59,12 +59,9 @@ class FlowSchedMultiPathEnv(Env):
         #     done == True on any link (i.e., for any ith link)
         self.nL = 6
         self.nF = 10
-
-        # Single dimension environment parameters
         self.nS = 20
         self.nA = 3
-        self.isd = [1/self.nS for _ in range(self.nS * self.nL)]
-        self.lastaction = None
+        self.isd = [ [1/self.nS for _ in range(self.nS)] for _ in range(self.nL)]
         self.action_space = spaces.Box(np.asarray([0]*self.nL),
                                        np.asarray([self.nA]*self.nL),
                                        dtype=np.int)
@@ -83,19 +80,9 @@ class FlowSchedMultiPathEnv(Env):
         # Parallel environments: one environment for one link
         self.nS_vec = [self.nS for _ in range(self.nL)]
         self.nA_vec = [3 for _ in range(self.nL)]
-        self.rm_size = np.zeros((self.nL,self.nF))
-        self.flow_time_link = [[0 for _ in range(self.nF)] for _ in range(self.nL)]
-        self.num_flows = 0
-        self.s = np.zeros((self.nL,1))[:,0]
-        self.bw_cap_link = np.zeros((self.nL, self.nS))
-        self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
-        wt = self._get_weight()
-        for iL in range(self.nL):
-            self.s[iL] = categorical_sample(self.isd, self.np_random)
-            self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
-            self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
-            # dimension of self.rate_link[i]: nA x nS
+        # code reuse
+        self.reset()
 
     def _get_weight(self):
         wt = [ [0.2*(self.np_random.rand()-0.5) + 0.9 for _ in range(self.nS)] for _ in range(self.nA)]
@@ -110,17 +97,17 @@ class FlowSchedMultiPathEnv(Env):
     def reset(self):
         self.lastaction = None
         self.rm_size = np.zeros((self.nL,self.nF))
-        self.flow_time_link = [0 for x in range(self.nF) for y in range(self.nL)]
+        self.flow_time_link = [0 for _ in range(self.nF) for _ in range(self.nL)]
         self.num_flows = 0
-        self.s = np.zeros((self.nL,1))[:,0]
+        self.s = np.zeros((1, self.nL))
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
         wt = self._get_weight()
-        for i in range(self.nL):
-            self.s[i] = categorical_sample(self.isd, self.np_random)
-            self.bw_cap_link[i] = [i+1 for i in range(self.nS)]
-            self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
+        for iL in range(self.nL):
+            self.s[iL] = categorical_sample(self.isd[iL], self.np_random)
+            self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
+            self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
             # dimension of self.rate_link[i]: nA x nS
         return self.s
 
