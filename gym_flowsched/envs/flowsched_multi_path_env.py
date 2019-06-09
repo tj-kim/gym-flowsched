@@ -1,18 +1,18 @@
 import sys
-import numpy as np 
+import numpy as np
 from gym import Env, spaces
 from gym.envs.toy_text import discrete
 
 class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
     """
-    Description: 
-    There is a network with pre-determined topology in which flows arrive at different timeslots. When each episode starts, flows arrive one by one, the bandwidth capacity on each link changes, and the agent chooses a protocol for all flows on each given link. 
+    Description:
+    There is a network with pre-determined topology in which flows arrive at different timeslots. When each episode starts, flows arrive one by one, the bandwidth capacity on each link changes, and the agent chooses a protocol for all flows on each given link.
 
     Initialization:
-    There are a total of 20 levels of bandwidth capacity on each link, 3 protocol choices, and 10 flows coming one by one per round. 
+    There are a total of 20 levels of bandwidth capacity on each link, 3 protocol choices, and 10 flows coming one by one per round.
 
     Observations:
-    There are 20 states on each link since there are 20 levels of bandwidth capacity on each link. 
+    There are 20 states on each link since there are 20 levels of bandwidth capacity on each link.
 
     Actions:
     There are 3 actions on each link:
@@ -25,7 +25,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
 
     Probability transition matrix:
     P[s][a]= [(probability, nextstate), ...]
-    
+
     We first focus on a single link network.
 
     """
@@ -40,11 +40,13 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.rate_link: self.nA * self.nS
         self.flow_time_link: self.nL * self.nF * 1
         self.bw_cap_link: self.nL * self.nS
-    
+
         """
-        #  Q: how to address the automatic initilization for all links when done == True on any link (i.e., for any i_link)
+        #  Q: how to address the automatic initilization for all links when done == True on any link (i.e., for any ith link)
 
 
+        self.nL = 6
+        self.nF = 10
 
         # Single dimension environment parameters
         self.nS = 20
@@ -52,39 +54,35 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.isd = [1/self.nS for x in range(self.nS)]
         self.lastaction = None
         self.action_space = spaces.Discrete(self.nA)
-        self.observation_space = spaces.Discrete(self.nS)
-        self.nF = 10
+        self.observation_space = spaces.Box(np.asarray([0]*self.nL),
+                                            np.asarray([self.nS]*self.nL),
+                                            dtype=np.int)
         self.seed(2)
         self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for s in range(self.nS):
             for a in range(self.nA):
                 for next_s in range(self.nS):
                     self.P[s][a].append((1/self.nS, next_s))
-        
 
         # Parallel environments: one environment for one link
-        self.nL = 6        
         self.nS_vec = [self.nS for x in range(self.nL)]
         self.nA_vec = [3 for x in range(self.nL)]
         self.rm_size = np.zeros((self.nL,self.nF))
         self.flow_time_link = [[0 for x in range(self.nF)] for y in range(self.nL)]
         self.num_flows = 0
-        self.s = np.zeros((self.nL,1))
+        self.s = np.zeros((self.nL,1))[:,0]
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
-        for i_link in range(self.nL):
-            self.s[i_link] = discrete.categorical_sample(self.isd, self.np_random)
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
-            for j in range(self.nA):
-                if j == 1:
-                    wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-                if j == 2:
-                    wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+        for i in range(self.nL):
+            self.s[i] = discrete.categorical_sample(self.isd, self.np_random)
+            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
+            wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
+            wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
-            self.bw_cap_link[i_link] = [i+1 for i in range(self.nS)]
-            self.rate_link[i_link] = np.matmul(wt,np.diag(self.bw_cap_link[i_link])) 
-            # dimension of self.rate_link[i_link]: nA x nS
+            self.bw_cap_link[i] = [x+1 for x in range(self.nS)]
+            self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
+            # dimension of self.rate_link[i]: nA x nS
 
 
 
@@ -93,37 +91,34 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.rm_size = np.zeros((self.nL,self.nF))
         self.flow_time_link = [0 for x in range(self.nF) for y in range(self.nL)]
         self.num_flows = 0
-        self.s = np.zeros((self.nL,1))
+        self.s = np.zeros((self.nL,1))[:,0]
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
-        for i_link in range(self.nL):
-            self.s[i_link] = discrete.categorical_sample(self.isd, self.np_random)
-            self.seed(i_link)
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
-            for j in range(self.nA):
-                if j == 1:
-                    wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-                if j == 2:
-                    wt[j][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
-            
-            self.bw_cap_link[i_link] = [i+1 for i in range(self.nS)]
-            self.rate_link[i_link] = np.matmul(wt,np.diag(self.bw_cap_link[i_link]))
-            # dimension of self.rate_link[i_link]: nA x nS
-        return hash(self.s)
+        for i in range(self.nL):
+            self.s[i] = discrete.categorical_sample(self.isd, self.np_random)
+            self.seed(i)
+            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
+            wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
+            wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
+
+            self.bw_cap_link[i] = [i+1 for i in range(self.nS)]
+            self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
+            # dimension of self.rate_link[i]: nA x nS
+        return self.s
 
     def render(self, mode='human'):
         return self.flow_time_link
 
     def _get_flow_time(self, RmSize, FlowTime, Rate):
         """
-        RmSize = rm_size[i_link]: nF * 1
-        FlowTime = flow_time_link[i_link]: nF * 1
-        Rate = rate[i_link][a][s], a constant
+        RmSize = rm_size[i]: nF * 1
+        FlowTime = flow_time_link[i]: nF * 1
+        Rate = rate[i][a][s], a constant
         """
-       
+
         RmSize_pos = [x for x in RmSize if x>0]
-        rate_per_flow = Rate / np.size(RmSize_pos) 
+        rate_per_flow = Rate / np.size(RmSize_pos)
         time_out = 0
 
         while time_out < 1 and  RmSize_pos != []:
@@ -137,7 +132,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
 
             if min(RmSize_pos) > rate_per_flow * (1-time_out):
                 ## FlowTime += (1-time_out) * np.size(RmSize_pos)
-                FlowTime += (1-time_out) * alive_flag
+                FlowTime += (1-time_out) * alive_flag[-1]
                 RmSize = [max(x - rate_per_flow * (1-time_out), 0) for x in RmSize]
                 time_out = 1
             else:
@@ -148,7 +143,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
                 time_out += time_shortest_flow
 
             RmSize_pos = [x for x in RmSize if x>0]
-            rate_per_flow = Rate / np.size(RmSize_pos)  
+            rate_per_flow = Rate / np.size(RmSize_pos)
 
         return RmSize, FlowTime
 
@@ -161,8 +156,8 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         transitions: nS tuples, where each tuple is (probability, nextstate)
         wt: self.nA * self.nS
         self.rate_link: self.nA * self.nS * self.nL
-        self.flow_time_link: self.nL * self.nF 
-        self.bandwidth_cap: self.nL * self.nS 
+        self.flow_time_link: self.nL * self.nF
+        self.bandwidth_cap: self.nL * self.nS
 
         """
         if self.num_flows < self.nF:
@@ -170,27 +165,26 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
                 newflow_size_link = [1, 1, 0, 1, 0, 1] # first path of the 6-link diamond network
             else:
                 newflow_size_link = [1, 0, 1, 0, 1, 0] # second path of the 6-link diamond network
-            self.num_flows += 1
             self.rm_size[...,self.num_flows] += newflow_size_link
+            self.num_flows += 1
 
-        for i_link in range(self.nL):
-
-            transitions = self.P[self.s[i_link]][a[i_link]]
-            reward = self.rate_link[i_link][a[i_link]][self.s[i_link]]
-            i = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
-            p, newstate = transitions[i]
+        p_vec, newstate_vec, reward_vec = [], [], []
+        for i in range(self.nL):
+            #print(self.s, a)
+            transitions = self.P[self.s[i]][a]
+            reward = self.rate_link[i][a][int(self.s[i])]
+            i_trans = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
+            p, newstate = transitions[i_trans]
             p_vec.append(p)
-            self.s[i_link] = newstate
+            self.s[i] = newstate
 
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for i in range(self.nS)] for j in range(self.nA)]
-
+            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
             wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-
             wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
-            self.rate_link[i_link] = np.matmul(wt,np.diag(self.bandwidth_cap[i_link]))
+            self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
 
-            self.rm_size[i_link], self.flow_time_link[i_link] = self._get_flow_time(self.rm_size[i_link], self.flow_time_link[i_link], self.rate[i_link][a][self.s])
+            self.rm_size[i], self.flow_time_link[i] = self._get_flow_time(self.rm_size[i], self.flow_time_link[i], self.rate_link[i][a][int(self.s[i])])
 
             newstate_vec.append(newstate)
             reward_vec.append(reward)
@@ -201,5 +195,6 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         else:
             done = False
 
-        return (newstate_vec, reward_vec, done, {"prob": p_vec})
+        print(newstate_vec, sum(reward_vec), done, {"prob": p_vec})
+        return (newstate_vec, sum(reward_vec), done, {"prob": p_vec})
 
