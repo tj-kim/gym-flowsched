@@ -128,7 +128,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         """
 
         RmSize_pos = [x for x in RmSize if x>0]
-        rate_per_flow = Rate / np.size(RmSize_pos)
+        rate_per_flow = Rate / (np.size(RmSize_pos) if np.size(RmSize_pos) > 0 else 1)
         time_out = 0
 
         while time_out < 1 and  RmSize_pos != []:
@@ -153,7 +153,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
                 time_out += time_shortest_flow
 
             RmSize_pos = [x for x in RmSize if x>0]
-            rate_per_flow = Rate / np.size(RmSize_pos)
+            rate_per_flow = Rate / (np.size(RmSize_pos) if np.size(RmSize_pos) > 0 else 1)
 
         return RmSize, FlowTime
 
@@ -206,6 +206,6 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         else:
             done = False
 
-        print(newstate_vec, sum(reward_vec), done, {"prob": p_vec})
+        #print(newstate_vec, sum(reward_vec), done, {"prob": p_vec})
         return (newstate_vec, sum(reward_vec), done, {"prob": p_vec})
 
