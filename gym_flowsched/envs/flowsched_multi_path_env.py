@@ -6,13 +6,18 @@ from gym.envs.toy_text import discrete
 class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
     """
     Description:
-    There is a network with pre-determined topology in which flows arrive at different timeslots. When each episode starts, flows arrive one by one, the bandwidth capacity on each link changes, and the agent chooses a protocol for all flows on each given link.
+    There is a network with pre-determined topology in which flows arrive at
+    different timeslots. When each episode starts, flows arrive one by one, the
+    bandwidth capacity on each link changes, and the agent chooses a protocol
+    for all flows on each given link.
 
     Initialization:
-    There are a total of 20 levels of bandwidth capacity on each link, 3 protocol choices, and 10 flows coming one by one per round.
+    There are a total of 20 levels of bandwidth capacity on each link, 3
+    protocol choices, and 10 flows coming one by one per round.
 
     Observations:
-    There are 20 states on each link since there are 20 levels of bandwidth capacity on each link.
+    There are 20 states on each link since there are 20 levels of bandwidth
+    capacity on each link.
 
     Actions:
     There are 3 actions on each link:
@@ -21,7 +26,9 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
     TCP Vegas
 
     Rewards:
-    There is a reward of -1 on each alive flow on each link for each action, since as long as the flow is not completed on a given link, the completion time of that flow on that link is increased by 1
+    There is a reward of -1 on each alive flow on each link for each action,
+    since as long as the flow is not completed on a given link, the completion
+    time of that flow on that link is increased by 1.
 
     Probability transition matrix:
     P[s][a]= [(probability, nextstate), ...]
@@ -42,7 +49,8 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.bw_cap_link: self.nL * self.nS
 
         """
-        #  Q: how to address the automatic initilization for all links when done == True on any link (i.e., for any ith link)
+        #  Q: how to address the automatic initilization for all links when
+        #     done == True on any link (i.e., for any ith link)
 
 
         self.nL = 6
@@ -74,11 +82,12 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
+        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
+        wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for _ in range(self.nS)]
+        wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for _ in range(self.nS)]
+
         for i in range(self.nL):
             self.s[i] = discrete.categorical_sample(self.isd, self.np_random)
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
-            wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-            wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
             self.bw_cap_link[i] = [x+1 for x in range(self.nS)]
             self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
@@ -95,12 +104,13 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
+        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
+        wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for _ in range(self.nS)]
+        wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for _ in range(self.nS)]
+
         for i in range(self.nL):
             self.s[i] = discrete.categorical_sample(self.isd, self.np_random)
             self.seed(i)
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
-            wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-            wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
             self.bw_cap_link[i] = [i+1 for i in range(self.nS)]
             self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
@@ -169,6 +179,9 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
             self.num_flows += 1
 
         p_vec, newstate_vec, reward_vec = [], [], []
+        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
+        wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for _ in range(self.nS)]
+        wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for _ in range(self.nS)]
         for i in range(self.nL):
             #print(self.s, a)
             transitions = self.P[self.s[i]][a]
@@ -178,14 +191,12 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
             p_vec.append(p)
             self.s[i] = newstate
 
-            wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
-            wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for i in range(self.nS)]
-            wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for i in range(self.nS)]
 
             self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
 
-            self.rm_size[i], self.flow_time_link[i] = self._get_flow_time(self.rm_size[i], self.flow_time_link[i], self.rate_link[i][a][int(self.s[i])])
-
+            self.rm_size[i], self.flow_time_link[i] = self._get_flow_time(self.rm_size[i],
+                                                                          self.flow_time_link[i],
+                                                                          self.rate_link[i][a][int(self.s[i])])
             newstate_vec.append(newstate)
             reward_vec.append(reward)
 
