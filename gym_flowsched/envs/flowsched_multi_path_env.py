@@ -1,99 +1,111 @@
 import sys
 import numpy as np
 from gym import Env, spaces
-from gym.envs.toy_text import discrete
+from gym.utils import seeding
 
-class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
+def categorical_sample(prob_n, np_random):
+    """
+    Sample from categorical distribution
+    Each row specifies class probabilities
+    """
+    prob_n = np.asarray(prob_n)
+    csprob_n = np.cumsum(prob_n)
+    return (csprob_n > np_random.rand()).argmax()
+
+class FlowSchedMultiPathEnv(Env):
     """
     Description:
-    There is a network with pre-determined topology in which flows arrive at
-    different timeslots. When each episode starts, flows arrive one by one, the
-    bandwidth capacity on each link changes, and the agent chooses a protocol
+    Consider a network with pre-determined topology in which flows arrive at
+    different timeslots. In each episode, flows arrive one by one, the bandwidth
+    capacity on each link changes, and the agent chooses a protocol
     for all flows on each given link.
 
     Initialization:
-    There are a total of 20 levels of bandwidth capacity on each link, 3
-    protocol choices, and 10 flows coming one by one per round.
+    There are in total 20 levels of bandwidth capacity on each link, 3 protocol
+    choices, and 10 flows coming one by one per episode.
 
     Observations:
-    There are 20 states on each link since there are 20 levels of bandwidth
+    There are 20 states on each link corresponding to 20 levels of bandwidth
     capacity on each link.
 
     Actions:
     There are 3 actions on each link:
-    TCP Cubic,
-    TCP Reno,
-    TCP Vegas
+    TCP Cubic --> 0
+    TCP Reno  --> 1
+    TCP Vegas --> 2
 
     Rewards:
-    There is a reward of -1 on each alive flow on each link for each action,
-    since as long as the flow is not completed on a given link, the completion
-    time of that flow on that link is increased by 1.
+    Rewards represent transmission rates per flow on each link.
 
-    Probability transition matrix:
-    P[s][a]= [(probability, nextstate), ...]
-
-    We first focus on a single link network.
-
+    Probability transition matrix on each link i:
+    P[ s[i] ][ a[i] ]= [(probability, newstate, reward, done), ...]
     """
     def __init__(self):
         """
-        self.rm_size: self.nL * self.nF
-        newflow_size_link: self.nF * 1
-        self.s: self.nL * 1
-        a: self.nL * 1
+        self.nF[1]
+        self.rm_size[self.nL, self.nF]: remaining size
+        new_flow_size_link[self.nL]: size of new flows on each link
+        self.s[self.nL]: state on each link
+        a[self.nL]: action on each link
         transitions: self.nS tuples, where each tuple is (probability, nextstate)
-        wt: self.nA * self.nS
+        wt[self.nA, self.nS]: #TODO change wt to weight
         self.rate_link: self.nA * self.nS
         self.flow_time_link: self.nL * self.nF * 1
-        self.bw_cap_link: self.nL * self.nS
+        self.bw_cap_link[self.nL, self.nS]: bandwidth capacity for each state on each link
 
         """
+        self.seed(0)
         #  Q: how to address the automatic initilization for all links when
         #     done == True on any link (i.e., for any ith link)
-
-
         self.nL = 6
         self.nF = 10
 
         # Single dimension environment parameters
         self.nS = 20
         self.nA = 3
-        self.isd = [1/self.nS for x in range(self.nS)]
+        self.isd = [1/self.nS for _ in range(self.nS * self.nL)]
         self.lastaction = None
-        self.action_space = spaces.Discrete(self.nA)
+        self.action_space = spaces.Box(np.asarray([0]*self.nL),
+                                       np.asarray([self.nA]*self.nL),
+                                       dtype=np.int)
         self.observation_space = spaces.Box(np.asarray([0]*self.nL),
                                             np.asarray([self.nS]*self.nL),
                                             dtype=np.int)
-        self.seed(2)
+        # Probability transition matrix is the same on each link
+        # TODO: change prob from 1/self.nS to something more realistic/gradual
+        # TODO: (reward=1, done=False) for now
         self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for s in range(self.nS):
             for a in range(self.nA):
-                for next_s in range(self.nS):
-                    self.P[s][a].append((1/self.nS, next_s))
+                for newstate in range(self.nS):
+                    self.P[s][a].append((1/self.nS, newstate, 1, False))
 
         # Parallel environments: one environment for one link
-        self.nS_vec = [self.nS for x in range(self.nL)]
-        self.nA_vec = [3 for x in range(self.nL)]
+        self.nS_vec = [self.nS for _ in range(self.nL)]
+        self.nA_vec = [3 for _ in range(self.nL)]
         self.rm_size = np.zeros((self.nL,self.nF))
-        self.flow_time_link = [[0 for x in range(self.nF)] for y in range(self.nL)]
+        self.flow_time_link = [[0 for _ in range(self.nF)] for _ in range(self.nL)]
         self.num_flows = 0
         self.s = np.zeros((self.nL,1))[:,0]
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
-        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
-        wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for _ in range(self.nS)]
-        wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for _ in range(self.nS)]
-
-        for i in range(self.nL):
-            self.s[i] = discrete.categorical_sample(self.isd, self.np_random)
-
-            self.bw_cap_link[i] = [x+1 for x in range(self.nS)]
-            self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
+        wt = self._get_weight()
+        for iL in range(self.nL):
+            self.s[iL] = categorical_sample(self.isd, self.np_random)
+            self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
+            self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
             # dimension of self.rate_link[i]: nA x nS
 
+    def _get_weight(self):
+        wt = [ [0.2*(self.np_random.rand()-0.5) + 0.9 for _ in range(self.nS)] for _ in range(self.nA)]
+        wt[1][0:self.nS] = [0.2*(self.np_random.rand()-0.5) + 0.7 for _ in range(self.nS)]
+        wt[2][0:self.nS] = [0.2*(self.np_random.rand()-0.5) + 0.5 for _ in range(self.nS)]
+        return wt
 
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     def reset(self):
         self.lastaction = None
@@ -104,14 +116,9 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
-        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
-        wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for _ in range(self.nS)]
-        wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for _ in range(self.nS)]
-
+        wt = self._get_weight()
         for i in range(self.nL):
-            self.s[i] = discrete.categorical_sample(self.isd, self.np_random)
-            self.seed(i)
-
+            self.s[i] = categorical_sample(self.isd, self.np_random)
             self.bw_cap_link[i] = [i+1 for i in range(self.nS)]
             self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
             # dimension of self.rate_link[i]: nA x nS
@@ -171,7 +178,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
 
         """
         if self.num_flows < self.nF:
-            if np.random.random() > 0.5:
+            if self.np_random.rand() > 0.5:
                 newflow_size_link = [1, 1, 0, 1, 0, 1] # first path of the 6-link diamond network
             else:
                 newflow_size_link = [1, 0, 1, 0, 1, 0] # second path of the 6-link diamond network
@@ -179,9 +186,7 @@ class FlowSchedMultiPathEnv(discrete.DiscreteEnv):
             self.num_flows += 1
 
         p_vec, newstate_vec, reward_vec = [], [], []
-        wt = [ [0.2*(np.random.random()-0.5) + 0.9 for _ in range(self.nS)] for __ in range(self.nA)]
-        wt[1][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.7 for _ in range(self.nS)]
-        wt[2][0:self.nS] = [0.2*(np.random.random()-0.5) + 0.5 for _ in range(self.nS)]
+        wt = self._get_weight()
         for i in range(self.nL):
             #print(self.s, a)
             transitions = self.P[self.s[i]][a]
