@@ -1,7 +1,9 @@
-import sys
+import os,sys
 import numpy as np
 from gym import Env, spaces
 from gym.utils import seeding
+
+DEBUG=os.path.isfile('./DEBUG')
 
 def categorical_sample(prob_n, np_random):
     """
@@ -62,12 +64,14 @@ class FlowSchedMultiPathEnv(Env):
         self.nS = 20
         self.nA = 3
         self.isd = [ [1/self.nS for _ in range(self.nS)] for _ in range(self.nL)]
-        self.action_space = spaces.Box(np.asarray([0]*self.nL),
-                                       np.asarray([self.nA]*self.nL),
-                                       dtype=np.int)
+        self.action_space = spaces.Box(low=0,
+                                       high=2,
+                                       shape=(10,),
+                                       dtype=np.int64)
+        #self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(np.asarray([0]*self.nL),
                                             np.asarray([self.nS]*self.nL),
-                                            dtype=np.int)
+                                            dtype=np.int64)
         # Probability transition matrix is the same on each link
         # TODO: change prob from 1/self.nS to something more realistic/gradual
         # TODO: (reward=1, done=False) for now
@@ -97,14 +101,17 @@ class FlowSchedMultiPathEnv(Env):
     def reset(self):
         self.lastaction = None
         self.rm_size = np.zeros((self.nL,self.nF))
-        self.flow_time_link = [0 for _ in range(self.nF) for _ in range(self.nL)]
+        self.flow_time_link = np.zeros((self.nL, self.nF))
         self.num_flows = 0
-        self.s = np.zeros((1, self.nL))
+        self.s = np.zeros(self.nL, dtype=np.int)
         self.bw_cap_link = np.zeros((self.nL, self.nS))
         self.rate_link = np.zeros((self.nL, self.nA, self.nS))
 
         wt = self._get_weight()
         for iL in range(self.nL):
+            if DEBUG:
+                print(np.shape(self.s))
+                print(self.s)
             self.s[iL] = categorical_sample(self.isd[iL], self.np_random)
             self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
             self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
@@ -164,6 +171,7 @@ class FlowSchedMultiPathEnv(Env):
         self.bandwidth_cap: self.nL * self.nS
 
         """
+        # process one flow per step (?)
         if self.num_flows < self.nF:
             if self.np_random.rand() > 0.5:
                 newflow_size_link = [1, 1, 0, 1, 0, 1] # first path of the 6-link diamond network
@@ -174,21 +182,24 @@ class FlowSchedMultiPathEnv(Env):
 
         p_vec, newstate_vec, reward_vec = [], [], []
         wt = self._get_weight()
-        for i in range(self.nL):
-            #print(self.s, a)
-            transitions = self.P[self.s[i]][a]
-            reward = self.rate_link[i][a][int(self.s[i])]
-            i_trans = discrete.categorical_sample([t[0] for t in transitions], self.np_random)
-            p, newstate = transitions[i_trans]
+        # round up actions
+        a = list(map(lambda x: int(round(x)), a))
+        for iL in range(self.nL):
+            if DEBUG:
+                print(self.s, '|', a)
+            transitions = self.P[ self.s[iL] ][ a[iL] ]
+            reward = self.rate_link[iL][ a[iL] ][int(self.s[iL])]
+            i_trans = categorical_sample([t[0] for t in transitions], self.np_random)
+            p, newstate, _, _ = transitions[i_trans]
             p_vec.append(p)
-            self.s[i] = newstate
+            self.s[iL] = newstate
 
 
-            self.rate_link[i] = np.matmul(wt,np.diag(self.bw_cap_link[i]))
+            self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
 
-            self.rm_size[i], self.flow_time_link[i] = self._get_flow_time(self.rm_size[i],
-                                                                          self.flow_time_link[i],
-                                                                          self.rate_link[i][a][int(self.s[i])])
+            self.rm_size[iL], self.flow_time_link[iL] = self._get_flow_time(self.rm_size[iL],
+                                                                          self.flow_time_link[iL],
+                                                                          self.rate_link[iL][a[iL]][int(self.s[iL])])
             newstate_vec.append(newstate)
             reward_vec.append(reward)
 
