@@ -3,8 +3,6 @@ import numpy as np
 from gym import Env, spaces
 from gym.utils import seeding
 
-DEBUG=os.path.isfile('./DEBUG')
-
 def categorical_sample(prob_n, np_random):
     """
     Sample from categorical distribution
@@ -50,9 +48,9 @@ class FlowSchedMultiPathEnv(Env):
         self.s[self.nL]: state on each link
         a[self.nL]: action on each link
         transitions: self.nS tuples, where each tuple is (probability, nextstate)
-        wt[self.nA, self.nS]: #TODO change wt to weight
-        self.rate_link: self.nA * self.nS
-        self.flow_time_link: self.nL * self.nF * 1
+        wt[self.nA, self.nS]: same for all links #TODO change wt to weight
+        self.rate_link[self.nA, self.nS]: total achieved transmission rate each link
+        self.flow_time_link[self.nL, self.nF]
         self.bw_cap_link[self.nL, self.nS]: bandwidth capacity for each state on each link
 
         """
@@ -109,9 +107,6 @@ class FlowSchedMultiPathEnv(Env):
 
         wt = self._get_weight()
         for iL in range(self.nL):
-            if DEBUG:
-                print(np.shape(self.s))
-                print(self.s)
             self.s[iL] = categorical_sample(self.isd[iL], self.np_random)
             self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
             self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
@@ -123,8 +118,8 @@ class FlowSchedMultiPathEnv(Env):
 
     def _get_flow_time(self, RmSize, FlowTime, Rate):
         """
-        RmSize = rm_size[i]: nF * 1
-        FlowTime = flow_time_link[i]: nF * 1
+        RmSize = rm_size[i]
+        FlowTime = flow_time_link[i]
         Rate = rate[i][a][s], a constant
         """
 
@@ -159,18 +154,6 @@ class FlowSchedMultiPathEnv(Env):
         return RmSize, FlowTime
 
     def step(self, a):
-        """
-        self.rm_size: self.nL * self.nF
-        newflow_size_link: self.nF * 1
-        self.s: self.nL * 1
-        self.a: self.nL * 1
-        transitions: nS tuples, where each tuple is (probability, nextstate)
-        wt: self.nA * self.nS
-        self.rate_link: self.nA * self.nS * self.nL
-        self.flow_time_link: self.nL * self.nF
-        self.bandwidth_cap: self.nL * self.nS
-
-        """
         # process one flow per step (?)
         if self.num_flows < self.nF:
             if self.np_random.rand() > 0.5:
@@ -185,8 +168,6 @@ class FlowSchedMultiPathEnv(Env):
         # round up actions
         a = list(map(lambda x: int(round(x)), a))
         for iL in range(self.nL):
-            if DEBUG:
-                print(self.s, '|', a)
             transitions = self.P[ self.s[iL] ][ a[iL] ]
             reward = self.rate_link[iL][ a[iL] ][int(self.s[iL])]
             i_trans = categorical_sample([t[0] for t in transitions], self.np_random)

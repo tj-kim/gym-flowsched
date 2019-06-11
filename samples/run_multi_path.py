@@ -220,11 +220,14 @@ def main(args):
         state = model.initial_state if hasattr(model, 'initial_state') else None
         dones = np.zeros((1,))
 
+        num_episodes = 10
         nF = 10
         nL = 6
         flow_time_link = np.zeros((nL, nF))
+        cum_flowtime = np.zeros((num_episodes,))
+        rew = 0
 
-        episode_rew = 0
+        i_episode = 0
         while True:
             if state is not None:
                 actions, _, state, _ = model.step(obs, S=state, M=dones)
@@ -232,14 +235,17 @@ def main(args):
                 actions, _, _, _ = model.step(obs)
 
             obs, rew, done, _ = env.step(actions)
-            episode_rew += rew[0] if isinstance(env, VecEnv) else rew
-            env.render()
+            # episode_rew += rew[0] if isinstance(env, VecEnv) else rew
             done = done.any() if isinstance(done, np.ndarray) else done
             if done:
-                print('episode_rew={}'.format(episode_rew))
-                episode_rew = 0
+                flow_time_link = env.render()
+                print(flow_time_link)
+                cum_flowtime[i_episode] = sum(flow_time_link.max(0))
+                i_episode += 1
+                if i_episode >= num_episodes:
+                    break
                 obs = env.reset()
-
+        print(cum_flowtime)
 
     env.close()
 
