@@ -83,6 +83,8 @@ class FlowSchedMultiPathEnv(Env):
         self.nS_vec = [self.nS for _ in range(self.nL)]
         self.nA_vec = [3 for _ in range(self.nL)]
 
+
+        self.flowtime_episodes = []
         # code reuse
         self.reset()
 
@@ -110,46 +112,48 @@ class FlowSchedMultiPathEnv(Env):
             self.s[iL] = categorical_sample(self.isd[iL], self.np_random)
             self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
             self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
-            # dimension of self.rate_link[i]: nA x nS
+            # dimension of self.rate_link[iL]: nA x nS
         return self.s
 
     def render(self, mode='human'):
-        return self.flow_time_link
+        return self.flowtime_episodes
 
     def _get_flow_time(self, RmSize, FlowTime, Rate):
         """
-        RmSize = rm_size[i]
-        FlowTime = flow_time_link[i]
-        Rate = rate[i][a][s], a constant
+        RmSize[self.nF] = self.rm_size[iL], remaining sizes of each flows on the iL-th link
+        FlowTime[self.nF] = self.flow_time_link[iL], flow-times of each flows on the iL-th link
+        Rate (constant) = self.rate_link[iL][a][s], total transmission rate of current flows on iL
         """
 
         RmSize_pos = [x for x in RmSize if x>0]
-        rate_per_flow = Rate / (np.size(RmSize_pos) if np.size(RmSize_pos) > 0 else 1)
+        num_alive_flows = np.size(RmSize_pos)
         time_out = 0
 
-        while time_out < 1 and  RmSize_pos != []:
+        while time_out < 1 and  num_alive_flows>0:
+            shortest_flowsize = min(RmSize_pos)
+            rate_per_flow = Rate / (num_alive_flows if num_alive_flows > 0 else 1) # same rate for all flows
+            time_shortest_flow = shortest_flowsize / rate_per_flow
             alive_flag = []
 
             for x in RmSize:
                 if x>0:
-                    alive_flag.append(1)
+                    alive_flag.append(1) # alive flows
                 else:
-                    alive_flag.append(0)
+                    alive_flag.append(0) # finished flows or flows that haven't arrived
+            alive_flag = np.array(alive_flag)        
 
-            if min(RmSize_pos) > rate_per_flow * (1-time_out):
-                ## FlowTime += (1-time_out) * np.size(RmSize_pos)
-                FlowTime += (1-time_out) * alive_flag[-1]
+            if time_shortest_flow > 1-time_out: # no more flows finished by this timeslot
+                FlowTime += (1-time_out) * alive_flag
                 RmSize = [max(x - rate_per_flow * (1-time_out), 0) for x in RmSize]
-                time_out = 1
+                time_out = 1 # timeslot ends
             else:
-                # The following two lines need modification if rate_per_flow is different over flows
-                time_shortest_flow = min(RmSize_pos) / rate_per_flow
-                FlowTime += time_shortest_flow * np.size(RmSize_pos)
-                RmSize = [max(x - min(RmSize_pos), 0) for x in RmSize]
+                FlowTime += time_shortest_flow * alive_flag
+                RmSize = [max(x - shortest_flowsize, 0) for x in RmSize]
                 time_out += time_shortest_flow
 
+            # Update the number and sizes of remaining flows and the transmission rate per flow    
             RmSize_pos = [x for x in RmSize if x>0]
-            rate_per_flow = Rate / (np.size(RmSize_pos) if np.size(RmSize_pos) > 0 else 1)
+            num_alive_flows = np.size(RmSize_pos)
 
         return RmSize, FlowTime
 
@@ -157,10 +161,10 @@ class FlowSchedMultiPathEnv(Env):
         # process one flow per step (?)
         if self.num_flows < self.nF:
             if self.np_random.rand() > 0.5:
-                newflow_size_link = [1, 1, 0, 1, 0, 1] # first path of the 6-link diamond network
+                path = np.array([1, 1, 0, 1, 0, 1]) # first path of the 6-link diamond network
             else:
-                newflow_size_link = [1, 0, 1, 0, 1, 0] # second path of the 6-link diamond network
-            self.rm_size[...,self.num_flows] += newflow_size_link
+                path = np.array([1, 0, 1, 0, 1, 0]) # second path of the 6-link diamond network
+            self.rm_size[...,self.num_flows] += (8 * self.np_random.rand() + 2) * path # assign a new flow onto its path
             self.num_flows += 1
 
         p_vec, newstate_vec, reward_vec = [], [], []
@@ -169,14 +173,13 @@ class FlowSchedMultiPathEnv(Env):
         a = list(map(lambda x: int(round(x)), a))
         for iL in range(self.nL):
             transitions = self.P[ self.s[iL] ][ a[iL] ]
-            reward = self.rate_link[iL][ a[iL] ][int(self.s[iL])]
             i_trans = categorical_sample([t[0] for t in transitions], self.np_random)
             p, newstate, _, _ = transitions[i_trans]
             p_vec.append(p)
             self.s[iL] = newstate
 
-
             self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
+            reward = self.rate_link[iL][ a[iL] ][int(self.s[iL])]
 
             self.rm_size[iL], self.flow_time_link[iL] = self._get_flow_time(self.rm_size[iL],
                                                                           self.flow_time_link[iL],
@@ -185,11 +188,12 @@ class FlowSchedMultiPathEnv(Env):
             reward_vec.append(reward)
 
         if ( self.rm_size == np.zeros((self.nL, self.nF)) ).all() and self.num_flows >= self.nF:
-            done = True
             print('Flow time on link {} is: {}'.format(0, self.flow_time_link[0]))
+            self.flowtime_episodes = sum(self.flow_time_link.max(0))
+            done = True
         else:
             done = False
 
         #print(newstate_vec, sum(reward_vec), done, {"prob": p_vec})
-        return (newstate_vec, sum(reward_vec), done, {"prob": p_vec})
+        return (newstate_vec, min(reward_vec), done, {"prob": p_vec})
 

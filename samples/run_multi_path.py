@@ -221,6 +221,8 @@ def main(args):
         dones = np.zeros((1,))
 
         num_episodes = 10
+        flowtime_episodes = np.zeros(num_episodes)
+
         nF = 10
         nL = 6
         flow_time_link = np.zeros((nL, nF))
@@ -238,16 +240,17 @@ def main(args):
             # episode_rew += rew[0] if isinstance(env, VecEnv) else rew
             done = done.any() if isinstance(done, np.ndarray) else done
             if done:
-                flow_time_link = env.render()
-                print(flow_time_link)
-                cum_flowtime[i_episode] = sum(flow_time_link.max(0))
+                flowtime_episodes[i_episode] = env.render()
                 i_episode += 1
                 if i_episode >= num_episodes:
                     break
                 obs = env.reset()
-        print(cum_flowtime)
 
     env.close()
+
+    # Write data into file
+    cum_flowtime = np.cumsum(flowtime_episodes)
+    np.savetxt('data_mp_normal.txt', cum_flowtime)
 
     return model
 
