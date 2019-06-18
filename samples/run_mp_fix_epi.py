@@ -220,7 +220,7 @@ def main(args):
         state = model.initial_state if hasattr(model, 'initial_state') else None
         dones = np.zeros((1,))
 
-        num_episodes = 10
+        num_episodes = 1000
         flowtime_episodes = np.zeros(num_episodes)
 
         nF = 10
@@ -230,7 +230,7 @@ def main(args):
         rew = 0
 
         i_episode = 0
-        actions = np.random.randint(3, size=6)
+        actions = np.random.randint(3, size=nL)
         while True:
             obs, rew, done, _ = env.step(actions)
             # episode_rew += rew[0] if isinstance(env, VecEnv) else rew
@@ -238,7 +238,7 @@ def main(args):
             if done:
                 flowtime_episodes[i_episode] = env.render()
                 i_episode += 1
-                actions = np.random.randint(3, size=6)
+                actions = np.random.randint(3, size=nL)
                 if i_episode >= num_episodes:
                     break
                 obs = env.reset()

@@ -64,7 +64,7 @@ class FlowSchedMultiPathEnv(Env):
         self.isd = [ [1/self.nS for _ in range(self.nS)] for _ in range(self.nL)]
         self.action_space = spaces.Box(low=0,
                                        high=2,
-                                       shape=(10,),
+                                       shape=(self.nL,),
                                        dtype=np.int64)
         #self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(np.asarray([0]*self.nL),
@@ -164,7 +164,8 @@ class FlowSchedMultiPathEnv(Env):
                 path = np.array([1, 1, 0, 1, 0, 1]) # first path of the 6-link diamond network
             else:
                 path = np.array([1, 0, 1, 0, 1, 0]) # second path of the 6-link diamond network
-            self.rm_size[...,self.num_flows] += (8 * self.np_random.rand() + 2) * path # assign a new flow onto its path
+            #self.rm_size[...,self.num_flows] += (8 * self.np_random.rand() + 2) * path # assign a new flow onto its path
+            self.rm_size[...,self.num_flows] += 10 * path
             self.num_flows += 1
 
         p_vec, newstate_vec, reward_vec = [], [], []

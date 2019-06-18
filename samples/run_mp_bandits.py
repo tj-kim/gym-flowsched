@@ -225,18 +225,29 @@ def main(args):
 
         nF = 10
         nL = 6
+        nA = 3
         flow_time_link = np.zeros((nL, nF))
         cum_flowtime = np.zeros((num_episodes,))
         rew = 0
+        cum_rew = np.zeros(nA)
+        num_obs = np.zeros(nA)
+        ave_rew = np.zeros(nA)
+        ucb_rew = np.zeros(nA)
+
 
         i_episode = 0
         while True:
-            if state is not None:
-                actions, _, state, _ = model.step(obs, S=state, M=dones)
-            else:
-                actions, _, _, _ = model.step(obs)
+            if i_episode < 3:
+                actions = np.random.randint(3, size=nL)
             obs, rew, done, _ = env.step(actions)
-            # episode_rew += rew[0] if isinstance(env, VecEnv) else rew
+            print(actions)
+            a_idx = int(round(actions[0]))
+            cum_rew[a_idx] += rew
+            num_obs[a_idx] += 1
+            ave_rew[a_idx] = cum_rew[a_idx] / num_obs[a_idx]
+            ucb_rew[a_idx] = ave_rew[a_idx] + 15 * np.sqrt(4*np.log(10*num_episodes) / (1+num_obs[a_idx]))
+            actions = np.array([np.argmax(ucb_rew)]*nL)
+
             done = done.any() if isinstance(done, np.ndarray) else done
             if done:
                 flowtime_episodes[i_episode] = env.render()
@@ -249,7 +260,7 @@ def main(args):
 
     # Write data into file
     cum_flowtime = np.cumsum(flowtime_episodes)
-    np.savetxt('data_mp_normal.txt', cum_flowtime)
+    np.savetxt('data_mp_bandits.txt', cum_flowtime)
 
     return model
 
