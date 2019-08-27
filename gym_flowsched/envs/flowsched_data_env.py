@@ -13,7 +13,7 @@ def categorical_sample(prob_n, np_random):
     csprob_n = np.cumsum(prob_n)
     return (csprob_n > np_random.rand()).argmax()
 
-class FlowSchedMultiPathEnv(Env):
+class FlowSchedDataEnv(Env):
     """
     Description:
     Consider a network with pre-determined topology in which flows arrive at
@@ -93,8 +93,8 @@ class FlowSchedMultiPathEnv(Env):
         reno_wt_pdf, cubic_wt_pdf = genfromtxt('reno_wt_pdf.txt'), genfromtxt('cubic_wt_pdf.txt')
         reno_sample_idx  = categorical_sample(reno_wt_pdf, self.np_random)  
         cubic_sample_idx = categorical_sample(cubic_wt_pdf, self.np_random)
-        reno_sample      = np.amin(reno_wt_pdf) + (np.amax(reno_wt_pdf)-np.amin(reno_wt_pdf)) / len(reno_wt_pdf)
-        cubic_sample     = np.amin(cubic_wt_pdf) + (np.amax(cubic_wt_pdf)-np.amin(cubic_wt_pdf)) / len(cubic_wt_pdf)
+        reno_sample      = np.amin(reno_wt_pdf) + reno_sample_idx * (np.amax(reno_wt_pdf)-np.amin(reno_wt_pdf)) / len(reno_wt_pdf)
+        cubic_sample     = np.amin(cubic_wt_pdf) + cubic_sample_idx * (np.amax(cubic_wt_pdf)-np.amin(cubic_wt_pdf)) / len(cubic_wt_pdf)
         wt[1][0:self.nS] = [reno_sample for _ in range(self.nS)]
         wt[2][0:self.nS] = [cubic_sample for _ in range(self.nS)]
         return wt

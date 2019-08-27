@@ -22,3 +22,16 @@ banditsMP:
 
 fixMP:
 	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e1 --play
+
+
+randomData:
+	python -m run_mp_random --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e1 --play
+
+normalData:
+	python -m run_multi_path --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e6 --play
+
+banditsData:
+	python -m run_mp_bandits --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e1 --play
+
+fixData:
+	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e1 --play

@@ -12,3 +12,8 @@ register(
     id='FlowSchedMP-v0',
     entry_point='gym_flowsched.envs:FlowSchedMultiPathEnv',
     )
+
+register(
+    id='FlowSchedData-v0',
+    entry_point='gym_flowsched.envs:FlowSchedDataEnv',
+    )
