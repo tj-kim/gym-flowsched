@@ -89,9 +89,14 @@ class FlowSchedMultiPathEnv(Env):
         self.reset()
 
     def _get_weight(self):
-        wt = [ [0.2*(self.np_random.rand()-0.5) + 0.9 for _ in range(self.nS)] for _ in range(self.nA)]
-        wt[1][0:self.nS] = [0.2*(self.np_random.rand()-0.5) + 0.7 for _ in range(self.nS)]
-        wt[2][0:self.nS] = [0.2*(self.np_random.rand()-0.5) + 0.5 for _ in range(self.nS)]
+        wt = [ [0.2*(self.np_random.rand()-0.5) + 0.3 for _ in range(self.nS)] for _ in range(self.nA)]
+        reno_wt_pdf, cubic_wt_pdf = genfromtxt('reno_wt_pdf.txt'), genfromtxt('cubic_wt_pdf.txt')
+        reno_sample_idx  = categorical_sample(reno_wt_pdf, self.np_random)  
+        cubic_sample_idx = categorical_sample(cubic_wt_pdf, self.np_random)
+        reno_sample      = np.amin(reno_wt_pdf) + (np.amax(reno_wt_pdf)-np.amin(reno_wt_pdf)) / len(reno_wt_pdf)
+        cubic_sample     = np.amin(cubic_wt_pdf) + (np.amax(cubic_wt_pdf)-np.amin(cubic_wt_pdf)) / len(cubic_wt_pdf)
+        wt[1][0:self.nS] = [reno_sample for _ in range(self.nS)]
+        wt[2][0:self.nS] = [cubic_sample for _ in range(self.nS)]
         return wt
 
     def seed(self, seed=None):
