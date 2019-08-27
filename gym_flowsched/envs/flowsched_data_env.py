@@ -1,5 +1,6 @@
 import os,sys
 import numpy as np
+from numpy import genfromtxt
 from gym import Env, spaces
 from gym.utils import seeding
 
@@ -71,13 +72,12 @@ class FlowSchedMultiPathEnv(Env):
                                             np.asarray([self.nS]*self.nL),
                                             dtype=np.int64)
         # Probability transition matrix is the same on each link
-        # TODO: change prob from 1/self.nS to something more realistic/gradual
-        # TODO: (reward=1, done=False) for now
+        state_dist = genfromtxt('state_dist.txt')
         self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for s in range(self.nS):
             for a in range(self.nA):
                 for newstate in range(self.nS):
-                    self.P[s][a].append((1/self.nS, newstate, 1, False))
+                    self.P[s][a].append((state_dist[newstate], newstate, 1, False))
 
         # Parallel environments: one environment for one link
         self.nS_vec = [self.nS for _ in range(self.nL)]
