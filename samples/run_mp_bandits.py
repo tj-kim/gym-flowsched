@@ -260,7 +260,8 @@ def main(args):
 
     # Write data into file
     cum_flowtime = np.cumsum(flowtime_episodes)
-    np.savetxt('data_mp_bandits.txt', cum_flowtime)
+    # np.savetxt('data_mp_bandits.txt', cum_flowtime)
+    np.savetxt('data_testbed_bandits.txt', cum_flowtime)
 
     return model
 

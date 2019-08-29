@@ -34,4 +34,4 @@ banditsData:
 	python -m run_mp_bandits --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e1 --play
 
 fixData:
-	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e1 --play
+	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e2 --play
