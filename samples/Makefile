@@ -4,6 +4,9 @@ random:
 normal:
 	python -m run --alg=a2c --env=FlowSched-v0 --network=mlp --num_timesteps=2e5 --play
 
+normalNoTrain:
+	python -m run --alg=a2c --env=FlowSched-v0 --network=mlp --num_timesteps=2e0 --play
+
 bandits:
 	python -m run_bandits --alg=a2c --env=FlowSched-v0 --network=mlp --num_timesteps=2e1 --play
 
@@ -15,7 +18,10 @@ randomMP:
 	python -m run_mp_random --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e1 --play
 
 normalMP:
-	python -m run_multi_path --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e6 --play
+	python -m run_multi_path --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e2 --play
+
+normalMP_no_train:
+	python -m run_multi_path --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e0 --play
 
 banditsMP:
 	python -m run_mp_bandits --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e1 --play

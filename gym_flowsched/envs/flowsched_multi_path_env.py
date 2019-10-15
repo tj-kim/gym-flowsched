@@ -121,7 +121,7 @@ class FlowSchedMultiPathEnv(Env):
     def _get_flow_time(self, RmSize, FlowTime, Rate):
         """
         RmSize[self.nF] = self.rm_size[iL], remaining sizes of each flows on the iL-th link
-        FlowTime[self.nF] = self.flow_time_link[iL], flow-times of each flows on the iL-th link
+        FlowTime[self.nF] = self.flow_time_link[iL], flow-time of each flow on the iL-th link
         Rate (constant) = self.rate_link[iL][a][s], total transmission rate of current flows on iL
         """
 

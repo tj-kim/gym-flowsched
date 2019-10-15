@@ -245,7 +245,8 @@ def main(args):
             cum_rew[a_idx] += rew
             num_obs[a_idx] += 1
             ave_rew[a_idx] = cum_rew[a_idx] / num_obs[a_idx]
-            ucb_rew[a_idx] = ave_rew[a_idx] + 15 * np.sqrt(4*np.log(10*num_episodes) / (1+num_obs[a_idx]))
+            ucb_rew[a_idx] = ave_rew[a_idx] + 10 * np.sqrt(np.log(num_episodes) / (1+num_obs[a_idx])) # Better
+            # ucb_rew[a_idx] = ave_rew[a_idx] + 10 * np.sqrt(4*np.log(num_episodes) / (1+num_obs[a_idx]))
             actions = np.array([np.argmax(ucb_rew)]*nL)
 
             done = done.any() if isinstance(done, np.ndarray) else done
@@ -260,7 +261,8 @@ def main(args):
 
     # Write data into file
     cum_flowtime = np.cumsum(flowtime_episodes)
-    np.savetxt('data_mp_bandits.txt', cum_flowtime)
+    # np.savetxt('data_mp_bandits.txt', cum_flowtime)
+    np.savetxt('data_mp_bandits_2.txt', cum_flowtime) # better 
     # np.savetxt('data_testbed_bandits.txt', cum_flowtime)
 
     return model

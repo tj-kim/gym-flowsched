@@ -249,8 +249,9 @@ def main(args):
 
     # Write data into file
     cum_flowtime = np.cumsum(flowtime_episodes)
-    np.savetxt('data_mp_normal.txt', cum_flowtime)
-    # np.savetxt('data_testbed_a2c.txt', cum_flowtime)
+    np.savetxt('data_mp_normal.txt', cum_flowtime) # Used to plot multipath performance under synthetic data
+    # np.savetxt('data_mp_normal_no_training.txt', cum_flowtime) # Used to plot a2c without pre-training under synthetic data
+    # np.savetxt('data_testbed_a2c.txt', cum_flowtime) # Used to plot multipath performance under BAE testbed data
 
     return model
 

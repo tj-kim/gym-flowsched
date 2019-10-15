@@ -244,7 +244,9 @@ def main(args):
         env.close()
 
     # write to file
-    np.savetxt('data_normal.txt', cum_flowtime_epi)
+    # np.savetxt('data_normal.txt', cum_flowtime_epi) # Used to plot a2c on single link/path under synthetic data
+    np.savetxt('data_normal_no_training.txt', cum_flowtime_epi) # Used to plot a2c without pre-training on single link/path under synthetic data
+
 
     return model
 
