@@ -195,8 +195,6 @@ def main(args):
     args, unknown_args = arg_parser.parse_known_args(args)
     extra_args = parse_cmdline_kwargs(unknown_args)
 
-    if args.extra_import is not None:
-        import_module(args.extra_import)
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
