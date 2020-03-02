@@ -34,7 +34,7 @@ except ImportError:
 _game_envs = defaultdict(set)
 for env in gym.envs.registry.all():
     # TODO: solve this with regexes
-    env_type = env._entry_point.split(':')[0].split('.')[-1]
+    env_type = env.entry_point.split(':')[0].split('.')[-1]
     _game_envs[env_type].add(env.id)
 
 # reading benchmark names directly from retro requires
@@ -123,7 +123,7 @@ def build_env(args):
 def get_env_type(env_id):
     # Re-parse the gym registry, since we could have new envs since last time.
     for env in gym.envs.registry.all():
-        env_type = env._entry_point.split(':')[0].split('.')[-1]
+        env_type = env.entry_point.split(':')[0].split('.')[-1]
         _game_envs[env_type].add(env.id)  # This is a set so add is idempotent
 
     if env_id in _game_envs.keys():
@@ -195,8 +195,6 @@ def main(args):
     args, unknown_args = arg_parser.parse_known_args(args)
     extra_args = parse_cmdline_kwargs(unknown_args)
 
-    if args.extra_import is not None:
-        import_module(args.extra_import)
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
         rank = 0
