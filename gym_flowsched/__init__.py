@@ -17,3 +17,8 @@ register(
     id='FlowSchedData-v0',
     entry_point='gym_flowsched.envs:FlowSchedDataEnv',
     )
+
+register(
+	id='DistFlowSched-v0',
+	entry_point='gym_flowsched.envs:DistFlowSchedEnv',
+	)

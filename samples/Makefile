@@ -1,3 +1,4 @@
+# For single link network with synthetic data
 random:
 	python -m run_random --alg=a2c --env=FlowSched-v0 --network=mlp --num_timesteps=2e1 --play
 
@@ -13,7 +14,7 @@ bandits:
 fix:
 	python -m run_fix_epi --alg=a2c --env=FlowSched-v0 --network=mlp --num_timesteps=2e1 --play
 
-
+# For multi-path network with synthetic data
 randomMP:
 	python -m run_mp_random --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e1 --play
 
@@ -30,6 +31,7 @@ fixMP:
 	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e1 --play
 
 
+# For multi-path network with data read from files
 randomData:
 	python -m run_mp_random --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e1 --play
 
@@ -41,3 +43,8 @@ banditsData:
 
 fixData:
 	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e2 --play
+
+# For distributed learning, multi-path network
+
+normalDist:
+	python -m run_dist_ --alg=a2c --env=DistFlowSched-v0 --network=mlp --num_timesteps=2e3 --play
