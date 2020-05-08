@@ -5,7 +5,7 @@ import gym
 import gym_flowsched
 from collections import defaultdict
 import tensorflow as tf
-tf.logging.set_verbosity(tf.logging.ERROR)
+#tf.logging.set_verbosity(tf.logging.ERROR)
 import numpy as np
 
 from baselines.common.vec_env import VecFrameStack, VecNormalize, VecEnv
