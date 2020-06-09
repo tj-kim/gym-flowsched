@@ -72,7 +72,7 @@ class FlowSchedDataEnv(Env):
                                             np.asarray([self.nS]*self.nL),
                                             dtype=np.int64)
         # Probability transition matrix is the same on each link
-        state_dist = genfromtxt('state_dist.txt')
+        state_dist = genfromtxt('data/state_dist.txt')
         self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
         for s in range(self.nS):
             for a in range(self.nA):
@@ -90,8 +90,8 @@ class FlowSchedDataEnv(Env):
 
     def _get_weight(self):
         wt = [ [0.2*(self.np_random.rand()-0.5) + 0.5 for _ in range(self.nS)] for _ in range(self.nA)]
-        reno_wt_pdf, cubic_wt_pdf = genfromtxt('reno_wt_pdf.txt'), genfromtxt('cubic_wt_pdf.txt')
-        reno_wt_supports, cubic_wt_supports = genfromtxt('reno_wt_supports.txt'), genfromtxt('cubic_wt_supports.txt')
+        reno_wt_pdf, cubic_wt_pdf = genfromtxt('data/reno_wt_pdf.txt'), genfromtxt('data/cubic_wt_pdf.txt')
+        reno_wt_supports, cubic_wt_supports = genfromtxt('data/reno_wt_supports.txt'), genfromtxt('data/cubic_wt_supports.txt')
 
         reno_sample_idx  = categorical_sample(reno_wt_pdf, self.np_random)
         cubic_sample_idx = categorical_sample(cubic_wt_pdf, self.np_random)
