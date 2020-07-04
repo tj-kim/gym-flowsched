@@ -5,7 +5,7 @@ import gym
 import gym_flowsched
 from collections import defaultdict
 import tensorflow as tf
-#tf.logging.set_verbosity(tf.logging.ERROR)
+tf.logging.set_verbosity(tf.logging.ERROR)
 import numpy as np
 
 from baselines.common.vec_env import VecFrameStack, VecNormalize, VecEnv
@@ -231,14 +231,7 @@ def main(args):
 
         i_episode = 0
         while True:
-            if state is not None:
-                actions, _, state, _ = model.step(obs, S=state, M=dones)
-            else:
-                actions, _, _, _ = model.step(obs)
-                print("actions at link 0 is {}".format(actions[0]))
-                print("actions are {}".format(actions))
-                print("actions' shape is {}".format(actions.shape))
-                # print("actions' type is {}".format(type(actions)))
+            actions = np.random.uniform(0,1, size=nL)
             obs, rew, done, _ = env.step(actions)
             # episode_rew += rew[0] if isinstance(env, VecEnv) else rew
             done = done.any() if isinstance(done, np.ndarray) else done
@@ -253,11 +246,9 @@ def main(args):
 
     # Write data into file
     cum_flowtime = np.cumsum(flowtime_episodes)
-    # np.savetxt('data/data_sd_rate_normal.txt', cum_flowtime)
-    # np.savetxt('data/data_mp_normal_1.txt', cum_flowtime)
-    np.savetxt('data/data_mp_normal.txt', cum_flowtime) # Used to plot multipath performance under synthetic data
-    # np.savetxt('data/data_mp_normal_no_training.txt', cum_flowtime) # Used to plot a2c without pre-training under synthetic data
-    # np.savetxt('data/data_testbed_a2c.txt', cum_flowtime) # Used to plot multipath performance under BAE testbed data
+    np.savetxt('data/data_sd_rate_random.txt', cum_flowtime)
+    # np.savetxt('data/data_mp_random.txt', cum_flowtime)
+    # np.savetxt('data/data_testbed_random.txt', cum_flowtime)
 
     return model
 

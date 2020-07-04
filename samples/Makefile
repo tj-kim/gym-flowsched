@@ -19,7 +19,7 @@ randomMP:
 	python -m run_mp_random --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e1 --play
 
 normalMP:
-	python -m run_multi_path --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e2 --play
+	python -m run_multi_path --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e5 --play
 
 normalMP_no_train:
 	python -m run_multi_path --alg=a2c --env=FlowSchedMP-v0 --network=mlp --num_timesteps=2e0 --play
@@ -44,7 +44,10 @@ banditsData:
 fixData:
 	python -m run_mp_fix_epi --alg=a2c --env=FlowSchedData-v0 --network=mlp --num_timesteps=2e2 --play
 
-# For distributed learning, multi-path network
+# For continous actions: sending rate control
 
-normalDist:
-	python -m run_dist_ --alg=a2c --env=DistFlowSched-v0 --network=mlp --num_timesteps=2e3 --play
+normalSR:
+	python -m run_multi_path --alg=a2c --env=FlowSchedSdRate-v0 --network=mlp --num_timesteps=2e6 --play
+
+randomSR:
+	python -m run_mp_sr_random --alg=a2c --env=FlowSchedSdRate-v0 --network=mlp --num_timesteps=2e0 --play

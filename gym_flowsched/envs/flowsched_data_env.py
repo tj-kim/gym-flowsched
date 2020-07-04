@@ -185,13 +185,17 @@ class FlowSchedDataEnv(Env):
         # round up actions
         a = list(map(lambda x: int(round(x)), a))
         for iL in range(self.nL):
+        	# Static Markov transition of states(bandwidth capacities)
             transitions = self.P[ self.s[iL] ][ a[iL] ]
             i_trans = categorical_sample([t[0] for t in transitions], self.np_random)
             p, newstate, _, _ = transitions[i_trans]
-            p_vec.append(p)
+            p_vec.append(p) # transition for the state vector over all links
             self.s[iL] = newstate
 
+            # Compute effective transmission rates each link for all protocols on a given link
+            # using weight (wt) multiplied by bandwidth capacity 
             self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
+            # Reward is the effective transmission rate achieved by our chosen protocol on the link
             reward = self.rate_link[iL][ a[iL] ][int(self.s[iL])]
 
             self.rm_size[iL], self.flow_time_link[iL] = self._get_flow_time(self.rm_size[iL],

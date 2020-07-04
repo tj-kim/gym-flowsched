@@ -1,5 +1,6 @@
 import os,sys
 import numpy as np
+from numpy import genfromtxt
 from gym import Env, spaces
 from gym.utils import seeding
 
@@ -12,7 +13,7 @@ def categorical_sample(prob_n, np_random):
     csprob_n = np.cumsum(prob_n)
     return (csprob_n > np_random.rand()).argmax()
 
-class FlowSchedMultiPathEnv(Env):
+class FlowSchedSdRateEnv(Env):
     """
     Description:
     Consider a network with pre-determined topology in which flows arrive at
@@ -48,50 +49,56 @@ class FlowSchedMultiPathEnv(Env):
         self.s[self.nL]: state on each link
         a[self.nL]: action on each link
         transitions: self.nS tuples, where each tuple is (probability, nextstate)
-        wt[self.nA, self.nS]: same for all links #TODO change wt to weight
-        self.rate_link[self.nA, self.nS]: total achieved transmission rate each link
+        wt[self.nL, self.nS]: produced given action for all links
+        self.rate_link[self.nL, self.nS]: total achieved transmission rate each link
         self.flow_time_link[self.nL, self.nF]
         self.bw_cap_link[self.nL, self.nS]: bandwidth capacity for each state on each link
 
         """
         self.seed(0)
-        #  Q: how to address the automatic initilization for all links when
-        #     done == True on any link (i.e., for any ith link)
         self.nL = 6
         self.nF = 10
         self.nS = 20
-        self.nA = 3
+        self.nA = 5
         self.isd = [ [1/self.nS for _ in range(self.nS)] for _ in range(self.nL)]
         self.action_space = spaces.Box(low=0,
-                                       high=2,
+                                       high=1,
                                        shape=(self.nL,),
-                                       dtype=np.int64)
+                                       dtype=np.float32)
         #self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(np.asarray([0]*self.nL),
                                             np.asarray([self.nS]*self.nL),
                                             dtype=np.int64)
         # Probability transition matrix is the same on each link
-        # TODO: change prob from 1/self.nS to something more realistic/gradual
-        # TODO: (reward=1, done=False) for now
-        self.P = {s: {a: [] for a in range(self.nA)} for s in range(self.nS)}
+        state_dist = genfromtxt('data/state_dist.txt')
+        self.P = {s: {disc_a: [] for disc_a in range(self.nA)} for s in range(self.nS)}
         for s in range(self.nS):
-            for a in range(self.nA):
+            for disc_a in range(self.nA):
                 for newstate in range(self.nS):
-                    self.P[s][a].append((1/self.nS, newstate, 1, False))
+                    self.P[s][disc_a].append((state_dist[newstate], newstate, 1, False))
 
-        # Parallel environments: one environment for one link
-        self.nS_vec = [self.nS for _ in range(self.nL)]
-        self.nA_vec = [3 for _ in range(self.nL)]
 
 
         self.flowtime_episodes = []
         # code reuse
         self.reset()
 
-    def _get_weight(self):
-        wt = [ [0.2*(self.np_random.rand()-0.5) + 0.9 for _ in range(self.nS)] for _ in range(self.nA)]       
-        wt[1][0:self.nS] = [0.2*(self.np_random.rand()-0.5) + 0.7 for _ in range(self.nS)]
-        wt[2][0:self.nS] = [0.2*(self.np_random.rand()-0.5) + 0.5 for _ in range(self.nS)]
+    def _get_weight(self, a):
+        # First, compute the mean of the effective transmission rate using the exponential function
+        # i.e., the middle of the range of sending rate (actions) yields a largest mean 
+        # of the effective transmission rate 
+        mu = 0.2 # 0.5 fraction of the feasible range of sending rate achieves the highest mean 
+        # of effective transmission rate
+        wt_mean =  np.e**(-(a-mu)**2) # wt_mean is in (0,1]
+        # print("The mean of effective transmission rate is:{}".format(wt_mean))
+        #transmission rate that sending rate (action) a can achieve
+
+        # Then, sample the effective transmission rate from a Gaussian distribution 
+        # with mean = wt_mean under the action a 
+        sigma = 0.2 # arbitrary setting
+        ini_small = [0.01 for _ in range(self.nL)] # smallest positive realized wt 
+        wt = np.array([np.minimum( np.maximum(ini_small,np.random.normal(wt_mean)), 1 ) for _ in range(self.nS)])
+        wt = np.transpose(wt)
         return wt
 
     def seed(self, seed=None):
@@ -105,14 +112,14 @@ class FlowSchedMultiPathEnv(Env):
         self.num_flows = 0
         self.s = np.zeros(self.nL, dtype=np.int)
         self.bw_cap_link = np.zeros((self.nL, self.nS))
-        self.rate_link = np.zeros((self.nL, self.nA, self.nS))
+        self.rate_link = np.zeros((self.nL, self.nS))
 
-        wt = self._get_weight()
+        wt = np.array([[0.5 for _ in range(self.nS)] for _ in range(self.nL)])
         for iL in range(self.nL):
             self.s[iL] = categorical_sample(self.isd[iL], self.np_random)
             self.bw_cap_link[iL] = [x+1 for x in range(self.nS)]
-            self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
-            # dimension of self.rate_link[iL]: nA x nS
+            self.rate_link[iL] = np.matmul(wt[iL],np.diag(self.bw_cap_link[iL]))
+            # shape of self.rate_link[iL]: [1, nS] (1*nS)
         return self.s
 
     def render(self, mode='human'):
@@ -121,8 +128,8 @@ class FlowSchedMultiPathEnv(Env):
     def _get_flow_time(self, RmSize, FlowTime, Rate):
         """
         RmSize[self.nF] = self.rm_size[iL], remaining sizes of each flows on the iL-th link
-        FlowTime[self.nF] = self.flow_time_link[iL], flow-time of each flow on the iL-th link
-        Rate (constant) = self.rate_link[iL][a][s], total transmission rate of current flows on iL
+        FlowTime[self.nF] = self.flow_time_link[iL], flow-times of each flows on the iL-th link
+        Rate (constant) = self.rate_link[iL][s], total transmission rate of current flows on iL
         """
 
         RmSize_pos = [x for x in RmSize if x>0]
@@ -158,7 +165,7 @@ class FlowSchedMultiPathEnv(Env):
         return RmSize, FlowTime
 
     def step(self, a):
-        # process one flow per step (?)
+        # One flow arrives per timestep until reaching a total of self.nF flows
         if self.num_flows < self.nF:
             if self.np_random.rand() > 0.5:
                 path = np.array([1, 1, 0, 1, 0, 1]) # first path of the 6-link diamond network
@@ -169,23 +176,38 @@ class FlowSchedMultiPathEnv(Env):
             self.num_flows += 1
 
         p_vec, newstate_vec, reward_vec = [], [], []
-        wt = self._get_weight()
-        # round up actions
-        a = list(map(lambda x: int(round(x)), a))
-        print("Rounded actions are:{}".format(a))
+        
+        # Use continuous actions as the values of sending rates
+        # but group the actions for each link to self.nA ranges 
+        # so that each group has a distinct transition
+        # print('actions shape:{}'.format(a.shape))
+        # print(type(a))
+
+        # Todo: reshape a from an arbitrary shape to a list with each element in [0,1]
+        a = list(map(lambda x: 1/(1+np.e**x), a))
+        a = np.array(a)
+        wt = self._get_weight(a)
+        disc_a = list(map(lambda x: min(int(x*self.nA), self.nA-1), a)) # actions for each link is in [0, 1]; if some action ==1, it will go to group 4
+
         for iL in range(self.nL):
-            transitions = self.P[ self.s[iL] ][ a[iL] ]
+            # if a[iL]==5:
+            #     print("action group on some link is:{}".format(a[iL]))
+            transitions = self.P[ self.s[iL] ][ disc_a[iL] ]
             i_trans = categorical_sample([t[0] for t in transitions], self.np_random)
             p, newstate, _, _ = transitions[i_trans]
-            p_vec.append(p)
+            p_vec.append(p) # transition for the state vector over all links
             self.s[iL] = newstate
 
-            self.rate_link[iL] = np.matmul(wt,np.diag(self.bw_cap_link[iL]))
-            reward = self.rate_link[iL][ a[iL] ][int(self.s[iL])]
+            # Todo: compute effective transmission rate for all using the weight (wt) times bandwidth capacity 
+            # print("wt shape:{}".format(wt.shape))
+            # print("bw shape:{}".format(self.bw_cap_link.shape))
+            self.rate_link[iL] = np.matmul(wt[iL],np.diag(self.bw_cap_link[iL])) # to be revised 
+            reward = self.rate_link[iL][int(self.s[iL])] # to be revised 
+            # directly compute reward from wt
 
             self.rm_size[iL], self.flow_time_link[iL] = self._get_flow_time(self.rm_size[iL],
                                                                           self.flow_time_link[iL],
-                                                                          self.rate_link[iL][a[iL]][int(self.s[iL])])
+                                                                          self.rate_link[iL][int(self.s[iL])])
             newstate_vec.append(newstate)
             reward_vec.append(reward)
 
