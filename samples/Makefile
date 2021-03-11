@@ -51,3 +51,8 @@ normalSR:
 
 randomSR:
 	python -m run_mp_sr_random --alg=a2c --env=FlowSchedSdRate-v0 --network=mlp --num_timesteps=2e0 --play
+
+# For TB runs
+
+banditsmtb:
+	python -m run_mp_bandits_mtb --alg=a2c --env=FlowSchedMergeTBEnv-v0 --network=mlp --num_timesteps=2e1 --play

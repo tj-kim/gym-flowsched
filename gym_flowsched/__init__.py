@@ -27,3 +27,8 @@ register(
     id='FlowSchedSdRate-v0',
     entry_point='gym_flowsched.envs:FlowSchedSdRateEnv',
     )
+    
+register(
+    id='FlowSchedMergeTBEnv-v0',
+    entry_point='gym_flowsched.envs:FlowSchedMergeTBEnv',
+    )
